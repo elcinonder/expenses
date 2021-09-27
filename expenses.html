@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="content-type" content="text/html">
+    <title>Javascript Project - Expense list</title>
+</head>
+
+<style>
+    .container {
+        background-color: wheat;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+
+        grid-template-areas:
+
+            "expenseTypeHeader expensePriceHeader expenseDateHeader . "
+            "expenseHolder expensePriceHolder expenseDateHolder . side"
+            "button .side"
+            "graph .side"
+            "footer footer footer footer";
+    }
+</style>
+
+
+<body>
+    <h1>Expenses</h1>
+    <p> Welcome. Please enter your expense list</p>
+    <div class="container">
+        <div class="expenseTypeHeader">
+            <h4>Expense Type <button style="background-color: cyan; border-color: black;" type="Type" id="sortType">Sort Type</button> </h4>
+        </div>
+        <div class="expensePriceHeader">
+            <h4>Expense Price <button style="background-color:greenyellow; border-color: black;" type="Price" id="sortPrice">Sort Price</button> </h4>
+        </div>
+        <div class="expenseDateHeader">
+            <h4>Expense Date <button style="background-color: violet; border-color: black;" type="Date" id="sortDate">Sort Date </button></h4>
+        </div>
+        <div id="expenseHolder">
+            <ul class="expList"></ul>
+        </div>
+        <div id="expensePriceHolder">
+            <ul class="expListValue"></ul>
+        </div>
+        <div id="expenseDateHolder">
+            <ul class="expDate"> </ul>
+        </div>
+
+        <input type="text" id="addType" placeholder="Item">
+        <input type="number" id="addPrice" placeholder="Price in US dollars">
+        <input type="date" id="addDate" placeholder="mm/dd/yyyy">
+        <div class="button">
+            <button type="button" id="addButton">Add Item</button>
+            <button type="done" id="doneButton">Done Entering Items</button>
+        </div>
+        <div class="graph">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <!-- importing libs-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.6.0/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@0.4.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelvr.net/npm/chart.js"></script>
+
+    <!-- adding js code -->
+    <script>
+
+        //I didn't delete some console.log lines I used, instead I commented them out 
+
+        // variables to access the elements of the class and buttons in html
+        const addButton = document.querySelector('#addButton');
+        const doneButton = document.querySelector('#doneButton');
+        const sortTypeButton = document.querySelector('#sortType');
+        const sortPriceButton = document.querySelector('#sortPrice');
+        const sortDateButton = document.querySelector('#sortDate');
+        const addType = document.querySelector('#addType');
+        const addPrice = document.querySelector('#addPrice');
+        const addDate = document.querySelector('#addDate');
+        const expType = document.querySelector('.expenseHolder'); //ul list is inside of expList
+        const expPrice = document.querySelector('.expensePriceHolder');
+        const expDate = document.querySelector('.expenseDateHolder');
+
+        let expenseItems = []; //contains all the data the user puts
+        let typeArray = []; //contains expense type data
+        let priceArray = []; //contains expense price data
+
+
+        //when the add button is clicked, it will push all the entered inputs to expenseItems array
+        //to display every item after they're added, called updatePage function
+        addButton.addEventListener('click', function (e) {
+            let latestExpenseItem = {
+                "type": addType.value,
+                "price": addPrice.value,
+                "date": addDate.value
+            };
+            expenseItems.push(latestExpenseItem);
+            updatePage();
+        });
+
+        //when doneButton is pressed, it disables the add button, updates the page, displays the pie chart
+        //it also checks if the input is a JSON, if yes it sorts list by date and updates the page to display
+        doneButton.addEventListener('click', function (e) {
+            addButton.disabled = true;
+            updatePage();
+            addButton.disabled = false;
+            getChart();
+            if (isJson(JSON.stringify(expenseItems))) {
+                sortList();
+                updatePage();
+            }
+
+        });
+
+        //when sort type button is clicked, it sorts the list by type
+        sortTypeButton.addEventListener('click', function (e) {
+            expenseItems.sort(compareExpenseTypes);
+            console.log(expenseItems.sort(compareExpenseTypes));
+            updatePage();
+        });
+
+        //when sort price button is clicked, it sorts the list by price
+        sortPriceButton.addEventListener('click', function (e) {
+            expenseItems.sort(compareExpensePrices);
+            updatePage();
+        });
+
+        //when sort date button is clicked, it sorts the list by date
+        sortDateButton.addEventListener('click', function (e) {
+            sortList();
+            updatePage();
+        });
+
+        // Sorts JSON array by date
+        //used built in Date object 
+        function sortList() {
+            expenseItems.sort((leftItem, rightItem) => {
+                return new Date(leftItem.date) - new Date(rightItem.date);
+            });
+        };
+
+        //compares type data entered and sorts them
+        function compareExpenseTypes(leftItem, rightItem) {
+            if (leftItem.type < rightItem.type)
+                return -1; //if the types are already sorted
+            if (leftItem.type > rightItem.type)
+                return 1; //continue comparing and sorting
+            return 0;
+        };
+
+        //compares price data entered and sorts them
+        function compareExpensePrices(leftItem, rightItem) {
+            if (leftItem.price < rightItem.price)
+                return -1; //if the price is already smaller, exits
+            if (leftItem.price > rightItem.price)
+                return 1; //continue comparing and sorting
+            return 0; //done, exit
+        };
+
+        //checks if the input is in JSON format used try/catch method to check. the function takes a string
+        //converts it into an object by using JSON.parse method
+        // if it goes to event handles, returns false, if not, returns true
+        function isJson(item) {
+            try {
+                JSON.parse(item);
+            } catch (e) {
+                return false;
+            }
+            return true;
+        }
+
+        //updates the page, displays the new list 
+        function updatePage() {
+            let expenseTypeHolder = document.getElementById("expenseHolder");
+            expenseTypeHolder.innerHTML = '';
+
+            let expensePriceHolder = document.getElementById("expensePriceHolder");
+            expensePriceHolder.innerHTML = '';
+
+            let expenseDateHolder = document.getElementById("expenseDateHolder");
+            expenseDateHolder.innerHTML = '';
+
+            expenseItems.forEach(function (currentItem) { //used foreach to display every item in a list
+                let typeItem = document.createElement("li");
+                let priceItem = document.createElement("li");
+                let dateItem = document.createElement("li");
+
+                typeItem.innerHTML = currentItem.type;
+                priceItem.innerHTML = currentItem.price;
+                dateItem.innerHTML = currentItem.date;
+
+                //used appendChild to add last entered inputs to the previous node
+                expenseTypeHolder.appendChild(typeItem);
+                expensePriceHolder.appendChild(priceItem);
+                expenseDateHolder.appendChild(dateItem);
+
+                //clear the values in the boxes
+                addType.value = '';
+                addPrice.value = '';
+                addDate.value = '';
+            });
+        }
+
+        //display chart by using chart.js
+        function getChart() {
+            //retrieved items' prices and types and created separate arrays for each by using map method
+            var priceData = expenseItems.map(function (item) { return item.price; });
+            var labelType = expenseItems.map(function (item) { return item.type });
+            var numberPriceData = []; //created this array to create an array of numbers instead of strings for prices
+            length = priceData.length;
+
+            for (var i = 0; i < length; i++) {
+                numberPriceData.push(parseInt(priceData[i])); //converting every item's price to an integer 
+            }
+
+            //console.log(priceData);
+            //console.log(labelType);
+            //console.log(numberPriceData);
+
+            //creating the chart
+            //entered multiple backgroundcolor for the price data so every item's price is shown with different colors
+
+            var data = [{
+                data: numberPriceData, //data takes numberPriceData array created above
+                labels: labelType, //takes string of label types
+                backgroundColor: [
+                    'rgba(255,99,132,0.6)',
+                    'rgba(54,162,235,0.6)',
+                    'rgba(255,206,86,0.6)',
+                    'rgba(51,20,51,0.6)',
+                    'rgba(153,51,102,0.6)',
+                    'rgba(0,0,153,0.6)',
+                    'rgba(255,153,255,0.6)',
+                    'rgba(255,255,0,0.6)'
+                ],
+                borderWidth: 1,
+                borderColor: '#777',
+                hoverBorderWidth: 3,
+                hoverBorderColor: '#0' // when hovered over, it highlights with black lines
+            }];
+
+            var options = {
+                tooltips: { 
+                    enabled: true,
+                    displayColors: false,
+                    mode: 'index',
+                    intersect: false,
+                },
+                hover: {
+                    mode: 'index',
+                    intersect: false
+                },
+                title: {
+                    display: true,
+                    text: 'Pie Chart of the Distribution of Expenses in Percentage'
+                },
+                plugins: { //calculated and displaying percentages by using formatter under plugins. the library is imported
+                    datalabels: {
+                        formatter: (value, ctx) => {
+
+                            let sum = 0; //created a sum variable initiated to 0 to calculate the percentage
+                            let dataArray = ctx.chart.data.datasets[0].data; //array that takes numberPriceData
+                            dataArray.map(data => {
+                                sum += data; //sums all the prices
+                            });
+                            //created a percentage variable, used tofixed method to make it two decimals
+                            let percentage = (value * 100 / sum).toFixed(2) + " %";
+                            return percentage;
+
+                        },
+                        color: '#fff',
+                    }
+                },
+            };
+
+            const ctx = document.getElementById("myChart").getContext('2d');
+            const myChart = new Chart(ctx, {
+                type: 'pie', //pie chart
+                data: {
+                    datasets: data
+                },
+                options: options
+            });
+        }
+
+    </script>
+</body>
+</html>
